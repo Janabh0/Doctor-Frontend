@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 interface DoctorProfile {
@@ -39,7 +40,7 @@ const mockDoctorData: DoctorProfile = {
   experience: "15 years",
   education: "Harvard Medical School",
   bio: "Experienced cardiologist with expertise in preventive cardiology and interventional procedures.",
-  avatar: "👩‍⚕️",
+  avatar: "person",
   rating: 4.8,
   totalPatients: 1250,
   totalAppointments: 3200,
@@ -122,21 +123,18 @@ export default function ProfileScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.brandText}>Stitch Design</Text>
-        </View>
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>Profile</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity style={styles.editButton} activeOpacity={0.7}>
-              <Ionicons name="create-outline" size={24} color="#1A94E5" />
+              <Ionicons name="create-outline" size={24} color="#4DA8DA" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.logoutButtonSmall}
               onPress={handleLogout}
               activeOpacity={0.8}
             >
-              <Ionicons name="log-out-outline" size={20} color="#1A94E5" />
+              <Ionicons name="log-out-outline" size={20} color="#4DA8DA" />
             </TouchableOpacity>
           </View>
         </View>
@@ -146,11 +144,18 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {doctorData?.avatar || "👨‍⚕️"}
-              </Text>
-            </View>
+            <LinearGradient
+              colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatar}
+            >
+              <Ionicons
+                name={(doctorData?.avatar as any) || "person"}
+                size={40}
+                color="#ffffff"
+              />
+            </LinearGradient>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={16} color="#fbbf24" />
               <Text style={styles.ratingText}>
@@ -349,7 +354,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#e5e7eb",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -378,7 +382,7 @@ const styles = StyleSheet.create({
   },
   specialization: {
     fontSize: 16,
-    color: "#1A94E5",
+    color: "#4DA8DA",
     fontWeight: "600",
     marginBottom: 4,
   },

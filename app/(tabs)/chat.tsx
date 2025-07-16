@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 interface PatientMessage {
@@ -28,7 +29,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Ethan Harper",
     lastMessage: "Thank you for the prescription, feeling much better now",
     timestamp: "2 min ago",
-    avatar: "👨‍🦱",
+    avatar: "person",
     unreadCount: 2,
     isOnline: true,
   },
@@ -37,7 +38,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Olivia Bennett",
     lastMessage: "When should I schedule my next appointment?",
     timestamp: "15 min ago",
-    avatar: "👩‍🦰",
+    avatar: "person",
     unreadCount: 1,
     isOnline: true,
   },
@@ -46,7 +47,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Noah Carter",
     lastMessage: "The test results look good, thank you doctor",
     timestamp: "1 hour ago",
-    avatar: "👨‍🦲",
+    avatar: "person",
     isOnline: false,
   },
   {
@@ -54,7 +55,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Sophia Evans",
     lastMessage: "I have some questions about my medication",
     timestamp: "3 hours ago",
-    avatar: "👩‍🦱",
+    avatar: "person",
     unreadCount: 3,
     isOnline: true,
   },
@@ -63,7 +64,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Liam Foster",
     lastMessage: "Thanks for the quick response!",
     timestamp: "Yesterday",
-    avatar: "👨‍💼",
+    avatar: "person",
     isOnline: false,
   },
   {
@@ -71,7 +72,7 @@ const patientsMessages: PatientMessage[] = [
     name: "Emma Wilson",
     lastMessage: "Could we reschedule tomorrow's appointment?",
     timestamp: "Yesterday",
-    avatar: "👩‍💻",
+    avatar: "person",
     unreadCount: 1,
     isOnline: false,
   },
@@ -106,9 +107,14 @@ export default function MessagesPage() {
     >
       <View style={styles.messageInfo}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{patient.avatar}</Text>
-          </View>
+          <LinearGradient
+            colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatar}
+          >
+            <Ionicons name={patient.avatar as any} size={24} color="#ffffff" />
+          </LinearGradient>
           {patient.isOnline && <View style={styles.onlineIndicator} />}
         </View>
         <View style={styles.messageDetails}>
@@ -135,13 +141,10 @@ export default function MessagesPage() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.brandText}>Stitch Design</Text>
-        </View>
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>Messages</Text>
           <TouchableOpacity style={styles.composeButton} activeOpacity={0.7}>
-            <Ionicons name="create-outline" size={24} color="#1A94E5" />
+            <Ionicons name="create-outline" size={24} color="#4DA8DA" />
           </TouchableOpacity>
         </View>
       </View>
@@ -254,7 +257,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -268,7 +270,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     borderWidth: 2,
     borderColor: "#ffffff",
   },
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   unreadBadge: {
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     borderRadius: 12,
     minWidth: 24,
     height: 24,

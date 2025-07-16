@@ -9,6 +9,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Patient {
   id: string;
@@ -25,21 +26,21 @@ const todaysAppointments: Patient[] = [
     name: "Patient: Ethan Carter",
     time: "9:00 AM - Check up",
     type: "Routine",
-    avatar: "👨",
+    avatar: "person",
   },
   {
     id: "2",
     name: "Patient: Olivia Bennett",
     time: "10:30 AM - Follow up",
     type: "Follow-up",
-    avatar: "👩",
+    avatar: "person",
   },
   {
     id: "3",
     name: "Patient: Noah Thompson",
     time: "1:00 PM - Lab Results",
     type: "Results",
-    avatar: "👨",
+    avatar: "person",
   },
 ];
 
@@ -49,7 +50,7 @@ const patientQueue: Patient[] = [
     name: "Patient: Ava Harper",
     time: "Waiting for 10 min",
     type: "Walk-in",
-    avatar: "👩",
+    avatar: "person",
     status: "waiting",
   },
   {
@@ -57,7 +58,7 @@ const patientQueue: Patient[] = [
     name: "Patient: Liam Foster",
     time: "Due in 5 min",
     type: "Scheduled",
-    avatar: "👨",
+    avatar: "person",
     status: "upcoming",
   },
 ];
@@ -77,9 +78,14 @@ export default function DoctorDashboard() {
       activeOpacity={0.7}
     >
       <View style={styles.patientInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{patient.avatar}</Text>
-        </View>
+        <LinearGradient
+          colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
+          <Ionicons name={patient.avatar as any} size={20} color="#ffffff" />
+        </LinearGradient>
         <View style={styles.patientDetails}>
           <Text style={styles.patientName}>{patient.name}</Text>
           <Text style={styles.patientTime}>{patient.time}</Text>
@@ -109,9 +115,6 @@ export default function DoctorDashboard() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.brandText}>Stitch Design</Text>
-        </View>
         <Text style={styles.dashboardTitle}>Dashboard</Text>
       </View>
 
@@ -215,7 +218,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,

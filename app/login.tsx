@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   welcomeContainer: {
     alignItems: "center",
     marginBottom: 32,
-    marginTop: 0,
+    marginTop: 50,
     paddingHorizontal: 24,
   },
   welcomeTitle: {

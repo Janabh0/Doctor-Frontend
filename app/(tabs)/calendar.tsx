@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Appointment {
   id: string;
@@ -35,7 +36,7 @@ const appointmentsData: Appointment[] = [
     time: "9:00 AM",
     type: "Routine Checkup",
     date: "2024-01-15",
-    avatar: "👨‍🦱",
+    avatar: "person",
     status: "confirmed",
   },
   {
@@ -44,7 +45,7 @@ const appointmentsData: Appointment[] = [
     time: "10:30 AM",
     type: "Follow-up",
     date: "2024-01-15",
-    avatar: "👩‍🦰",
+    avatar: "person",
     status: "confirmed",
   },
   {
@@ -53,7 +54,7 @@ const appointmentsData: Appointment[] = [
     time: "2:00 PM",
     type: "Lab Results",
     date: "2024-01-16",
-    avatar: "👨‍🦲",
+    avatar: "person",
     status: "pending",
   },
   {
@@ -62,7 +63,7 @@ const appointmentsData: Appointment[] = [
     time: "11:00 AM",
     type: "Consultation",
     date: "2024-01-17",
-    avatar: "👩‍🦱",
+    avatar: "person",
     status: "confirmed",
   },
   {
@@ -71,7 +72,7 @@ const appointmentsData: Appointment[] = [
     time: "3:30 PM",
     type: "Physical Exam",
     date: "2024-01-18",
-    avatar: "👨‍💼",
+    avatar: "person",
     status: "confirmed",
   },
   {
@@ -80,7 +81,7 @@ const appointmentsData: Appointment[] = [
     time: "9:30 AM",
     type: "Dermatology",
     date: "2024-01-19",
-    avatar: "👩‍💻",
+    avatar: "person",
     status: "pending",
   },
   {
@@ -89,7 +90,7 @@ const appointmentsData: Appointment[] = [
     time: "1:15 PM",
     type: "Cardiology",
     date: "2024-01-22",
-    avatar: "👨‍🔬",
+    avatar: "person",
     status: "confirmed",
   },
   {
@@ -98,7 +99,7 @@ const appointmentsData: Appointment[] = [
     time: "4:00 PM",
     type: "Pediatrics",
     date: "2024-01-23",
-    avatar: "👩‍⚕️",
+    avatar: "person",
     status: "confirmed",
   },
 ];
@@ -228,9 +229,18 @@ export default function AppointmentsPage() {
         activeOpacity={0.7}
       >
         <View style={styles.appointmentInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{appointment.avatar}</Text>
-          </View>
+          <LinearGradient
+            colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatar}
+          >
+            <Ionicons
+              name={appointment.avatar as any}
+              size={24}
+              color="#ffffff"
+            />
+          </LinearGradient>
           <View style={styles.appointmentDetails}>
             <Text style={styles.patientName}>{appointment.patientName}</Text>
             <Text style={styles.appointmentType}>{appointment.type}</Text>
@@ -259,13 +269,10 @@ export default function AppointmentsPage() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.brandText}>Stitch Design</Text>
-        </View>
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>Appointments</Text>
           <TouchableOpacity style={styles.addButton} activeOpacity={0.7}>
-            <Ionicons name="add" size={24} color="#1A94E5" />
+            <Ionicons name="add" size={24} color="#4DA8DA" />
           </TouchableOpacity>
         </View>
       </View>
@@ -457,7 +464,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   selectedDay: {
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     borderRadius: 20,
   },
   calendarDayText: {
@@ -466,7 +473,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   todayDayText: {
-    color: "#1A94E5",
+    color: "#4DA8DA",
     fontWeight: "600",
   },
   selectedDayText: {
@@ -479,7 +486,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -527,7 +534,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -551,7 +557,7 @@ const styles = StyleSheet.create({
   },
   appointmentTime: {
     fontSize: 14,
-    color: "#1A94E5",
+    color: "#4DA8DA",
     fontWeight: "500",
   },
   statusBadge: {

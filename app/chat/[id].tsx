@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useRef, useEffect } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 interface Message {
@@ -122,9 +123,14 @@ export default function PatientChat() {
           </TouchableOpacity>
           <View style={styles.headerInfo}>
             <View style={styles.patientInfo}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{avatar}</Text>
-              </View>
+              <LinearGradient
+                colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatar}
+              >
+                <Ionicons name="person" size={20} color="#ffffff" />
+              </LinearGradient>
               <View>
                 <Text style={styles.patientName}>{name}</Text>
                 <View style={styles.statusContainer}>
@@ -140,14 +146,14 @@ export default function PatientChat() {
               onPress={handleCall}
               activeOpacity={0.7}
             >
-              <Ionicons name="call" size={20} color="#1A94E5" />
+              <Ionicons name="call" size={20} color="#4DA8DA" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.callButton}
               onPress={handleVideoCall}
               activeOpacity={0.7}
             >
-              <Ionicons name="videocam" size={20} color="#1A94E5" />
+              <Ionicons name="videocam" size={20} color="#4DA8DA" />
             </TouchableOpacity>
           </View>
         </View>
@@ -277,7 +283,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     marginRight: 6,
   },
   onlineStatus: {
@@ -357,9 +362,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   messageBubbleDoctor: {
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     borderBottomRightRadius: 6,
-    shadowColor: "#1A94E5",
+    shadowColor: "#4DA8DA",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -420,13 +425,13 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   sendButton: {
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
     borderRadius: 22,
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#1A94E5",
+    shadowColor: "#4DA8DA",
     shadowOffset: {
       width: 0,
       height: 2,

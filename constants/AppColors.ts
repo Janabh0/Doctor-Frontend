@@ -1,15 +1,15 @@
 export const AppColors = {
-  primary: "#1A94E5", // New accent color
+  primary: "#4DA8DA", // New button and border color
   secondary: "#007AFF",
   background: "#F8F9FA", // Light background from the image
   text: "#000000",
   textSecondary: "#6b7280",
   surface: "#FFFFFF",
-  border: "#E5E5EA",
+  border: "#4DA8DA",
   gradient: {
-    start: "#1A94E5",
-    middle: "#1589D9",
-    end: "#107ECD",
+    start: "#4DA8DA",
+    middle: "#3A9BCE",
+    end: "#2A8EC2",
   },
   success: "#34C759",
   warning: "#FF9500",

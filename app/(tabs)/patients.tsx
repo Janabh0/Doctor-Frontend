@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Patient {
   id: string;
@@ -24,35 +25,35 @@ const patientsData: Patient[] = [
     id: "1",
     name: "Ethan Harper",
     time: "10:00 AM",
-    avatar: "👨‍🦱",
+    avatar: "person",
     status: "today",
   },
   {
     id: "2",
     name: "Olivia Bennett",
     time: "11:30 AM",
-    avatar: "👩‍🦰",
+    avatar: "person",
     status: "today",
   },
   {
     id: "3",
     name: "Noah Carter",
     time: "1:00 PM",
-    avatar: "👨‍🦲",
+    avatar: "person",
     status: "today",
   },
   {
     id: "4",
     name: "Sophia Evans",
     time: "2:30 PM",
-    avatar: "👩‍🦱",
+    avatar: "person",
     status: "today",
   },
   {
     id: "5",
     name: "Liam Foster",
     time: "6:00 PM",
-    avatar: "👨‍💼",
+    avatar: "person",
     status: "upcoming",
   },
 ];
@@ -79,9 +80,14 @@ export default function PatientsPage() {
       activeOpacity={0.7}
     >
       <View style={styles.patientInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{patient.avatar}</Text>
-        </View>
+        <LinearGradient
+          colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
+          <Ionicons name={patient.avatar as any} size={24} color="#ffffff" />
+        </LinearGradient>
         <View style={styles.patientDetails}>
           <Text style={styles.patientName}>{patient.name}</Text>
           <Text style={styles.patientTime}>{patient.time}</Text>
@@ -96,13 +102,10 @@ export default function PatientsPage() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.brandText}>Stitch Design</Text>
-        </View>
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>Patients</Text>
           <TouchableOpacity style={styles.addButton} activeOpacity={0.7}>
-            <Ionicons name="add" size={24} color="#1A94E5" />
+            <Ionicons name="add" size={24} color="#4DA8DA" />
           </TouchableOpacity>
         </View>
       </View>
@@ -256,7 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   activeFilterTab: {
-    backgroundColor: "#1A94E5",
+    backgroundColor: "#4DA8DA",
   },
   filterText: {
     fontSize: 14,
@@ -288,7 +291,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
