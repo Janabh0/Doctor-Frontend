@@ -10,6 +10,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: "#4DA8DA",
         tabBarInactiveTintColor: "#9ca3af",
         headerShown: false,
+        header: () => null,
         tabBarStyle: {
           backgroundColor: "#ffffff",
           borderTopWidth: 0.5,
@@ -40,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: "Calendar",
+          title: "Appoint",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "calendar" : "calendar-outline"}

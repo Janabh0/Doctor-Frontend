@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 
 interface Patient {
   id: string;
@@ -64,10 +65,8 @@ const patientQueue: Patient[] = [
 ];
 
 const quickActions = [
-  { id: "1", title: "View Patient Records", icon: "document-text-outline" },
-  { id: "2", title: "Secure Messaging", icon: "chatbubble-outline" },
-  { id: "3", title: "View Call", icon: "videocam-outline" },
-  { id: "4", title: "Schedule", icon: "calendar-outline" },
+  { id: "1", title: "View Call", icon: "videocam-outline" },
+  { id: "2", title: "Schedule", icon: "calendar-outline" },
 ];
 
 export default function DoctorDashboard() {
@@ -100,6 +99,13 @@ export default function DoctorDashboard() {
       key={action.id}
       style={styles.actionCard}
       activeOpacity={0.7}
+      onPress={() => {
+        if (action.title === "View Call") {
+          router.push("/modals/call-history");
+        } else if (action.title === "Schedule") {
+          router.push("/modals/all-appointments");
+        }
+      }}
     >
       <View style={styles.actionContent}>
         <Ionicons name={action.icon as any} size={20} color="#6b7280" />
@@ -115,13 +121,63 @@ export default function DoctorDashboard() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.dashboardTitle}>Dashboard</Text>
+        <View style={styles.headerTop}>
+          <LinearGradient
+            colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.profilePic}
+          >
+            <Ionicons name="person" size={24} color="#ffffff" />
+          </LinearGradient>
+          <View style={styles.welcomeText}>
+            <Text style={styles.welcomeBack}>Welcome Back</Text>
+            <Text style={styles.doctorName}>Dr. Williamson</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="notifications" size={20} color="#4DA8DA" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Search Banner - Fixed at top */}
+      <View style={styles.searchBannerContainer}>
+        <LinearGradient
+          colors={["#7BC8E8", "#6BB8D8", "#5BA8C8", "#4B98B8", "#5BA8C8"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.searchBanner}
+        >
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerText}>
+              <Text style={styles.bannerTitle}>Looking for patients?</Text>
+              <View style={styles.searchBar}>
+                <Ionicons name="search" size={16} color="#9ca3af" />
+                <Text style={styles.searchPlaceholder}>
+                  Search for patients...
+                </Text>
+              </View>
+            </View>
+            <View style={styles.bannerIcon}>
+              <Ionicons name="medical" size={40} color="#ffffff" />
+            </View>
+          </View>
+        </LinearGradient>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Today's Appointments */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Appointments</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Appointments</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/modals/today-appointments")}
+            >
+              <Text style={styles.seeAllText}>See All {">"}</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.sectionContent}>
             {todaysAppointments.map((patient) => renderPatientCard(patient))}
           </View>
@@ -129,7 +185,14 @@ export default function DoctorDashboard() {
 
         {/* Patient Queue */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Patient Queue</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Patient Queue</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/modals/patient-queue")}
+            >
+              <Text style={styles.seeAllText}>See All {">"}</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.sectionContent}>
             {patientQueue.map((patient) => renderPatientCard(patient, true))}
           </View>
@@ -137,7 +200,9 @@ export default function DoctorDashboard() {
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+          </View>
           <View style={styles.sectionContent}>
             {quickActions.map((action) => renderQuickAction(action))}
           </View>
@@ -154,60 +219,140 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
     backgroundColor: "#ffffff",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#e5e7eb",
   },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
   },
-  brandText: {
+  profilePic: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  welcomeText: {
+    flex: 1,
+  },
+  welcomeBack: {
     fontSize: 14,
     color: "#6b7280",
-    fontWeight: "500",
+    marginBottom: 2,
   },
-  dashboardTitle: {
-    fontSize: 28,
+  doctorName: {
+    fontSize: 20,
     fontWeight: "700",
     color: "#111827",
+  },
+  headerIcons: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchBannerContainer: {
+    position: "absolute",
+    top: 160,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  searchBanner: {
+    borderRadius: 16,
+    padding: 20,
+  },
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bannerText: {
+    flex: 1,
+  },
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 12,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchPlaceholder: {
+    fontSize: 14,
+    color: "#9ca3af",
+    marginLeft: 8,
+  },
+  bannerIcon: {
+    marginLeft: 16,
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 160,
   },
   section: {
-    marginTop: 24,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: "#4DA8DA",
+    fontWeight: "500",
   },
   sectionContent: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#8DBCC7",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 4,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   patientCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#f3f4f6",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 0,
   },
   patientInfo: {
     flexDirection: "row",
@@ -221,9 +366,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 20,
   },
   patientDetails: {
     flex: 1,
@@ -242,10 +384,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#f3f4f6",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 0,
   },
   actionContent: {
     flexDirection: "row",
