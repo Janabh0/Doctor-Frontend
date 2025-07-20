@@ -1,11 +1,11 @@
-import React from "react";
-import { ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
+import { ColorValue, ViewStyle } from "react-native";
 
 interface GradientViewProps {
   children?: React.ReactNode;
   style?: ViewStyle;
-  colors?: string[];
+  colors?: readonly [ColorValue, ColorValue, ...ColorValue[]];
   start?: { x: number; y: number };
   end?: { x: number; y: number };
   type?: "blue" | "avatar";
@@ -19,14 +19,14 @@ export const GradientView: React.FC<GradientViewProps> = ({
   end,
   type = "blue",
 }) => {
-  const getDefaultColors = () => {
+  const getDefaultColors = (): readonly [ColorValue, ColorValue, ColorValue] => {
     switch (type) {
       case "blue":
-        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"];
+        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"] as const;
       case "avatar":
-        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"];
+        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"] as const;
       default:
-        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"];
+        return ["#4DA8DA", "#3A9BCE", "#2A8EC2"] as const;
     }
   };
 

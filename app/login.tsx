@@ -1,19 +1,23 @@
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { apiService } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { AppColors } from "../constants/AppColors";
+
 
 interface FormData {
   civilId: string;
@@ -25,6 +29,7 @@ export default function LoginPage() {
     civilId: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({
@@ -33,20 +38,44 @@ export default function LoginPage() {
     }));
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!formData.civilId || !formData.password) {
       Alert.alert("Error", "Please fill in all required fields");
       return;
     }
 
-    // TODO: Implement backend login logic here
-    console.log("Login attempt:", {
-      civilId: formData.civilId,
-      password: formData.password,
-    });
+    setLoading(true);
+    console.log("🔐 Attempting login with Civil ID:", formData.civilId);
 
-    // Navigate to home page after successful login
-    router.push("/(tabs)");
+    try {
+      const response = await apiService.login(formData.civilId, formData.password);
+
+      if (response.success && response.data) {
+        // Store authentication data
+        await authStorage.login(response.data.token, response.data);
+        console.log("✅ Login successful:", response.data);
+        
+        // Show success message
+        Alert.alert(
+          "Login Successful", 
+          `Welcome back, Dr. ${response.data.name}!`,
+          [
+            {
+              text: "Continue",
+              onPress: () => router.push("/(tabs)")
+            }
+          ]
+        );
+      } else {
+        console.log("❌ Login failed:", response.error);
+        Alert.alert("Login Failed", response.error || "Invalid credentials. Please try again.");
+      }
+    } catch (error) {
+      console.log("💥 Login error:", error);
+      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,14 +117,33 @@ export default function LoginPage() {
               </View>
 
               <Button
-                title="Login"
+                title={loading ? "Signing In..." : "Login"}
                 onPress={handleLogin}
                 style={styles.submitButton}
+                disabled={loading}
               />
+
+              {loading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={AppColors.primary} />
+                  <Text style={styles.loadingText}>Signing you in...</Text>
+                </View>
+              )}
 
               <TouchableOpacity style={styles.forgotPassword}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.registerLink}
+                onPress={() => router.push("/debug" as any)}
+              >
+                <Text style={styles.registerLinkText}>
+                  🔧 Test Backend Connection
+                </Text>
+              </TouchableOpacity>
+
+
             </View>
           </View>
         </ScrollView>
@@ -157,4 +205,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
   },
+  registerLink: {
+    alignItems: "center",
+    marginTop: 16,
+  },
+  registerLinkText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  registerLinkBold: {
+    color: AppColors.primary,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+
 });

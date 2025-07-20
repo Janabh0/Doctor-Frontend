@@ -1,140 +1,87 @@
 "use client";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from "react-native";
+import { apiService } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
-interface Appointment {
+interface AppointmentDisplay {
   id: string;
   patientName: string;
   date: string;
   time: string;
   type: string;
-  status: "confirmed" | "pending" | "completed" | "cancelled";
+  status: "confirmed" | "pending" | "completed" | "cancelled" | "scheduled" | "waiting";
   avatar: string;
 }
 
-const allAppointments: Appointment[] = [
-  {
-    id: "1",
-    patientName: "Sarah Johnson",
-    date: "Today",
-    time: "9:00 AM",
-    type: "Check-up",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "2",
-    patientName: "Michael Chen",
-    date: "Today",
-    time: "10:30 AM",
-    type: "Follow-up",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "3",
-    patientName: "Emily Davis",
-    date: "Today",
-    time: "1:00 PM",
-    type: "Lab Results",
-    status: "pending",
-    avatar: "person",
-  },
-  {
-    id: "4",
-    patientName: "David Wilson",
-    date: "Tomorrow",
-    time: "11:00 AM",
-    type: "Consultation",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "5",
-    patientName: "Lisa Brown",
-    date: "Tomorrow",
-    time: "2:30 PM",
-    type: "Emergency",
-    status: "pending",
-    avatar: "person",
-  },
-  {
-    id: "6",
-    patientName: "Robert Taylor",
-    date: "Dec 21",
-    time: "9:15 AM",
-    type: "Routine",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "7",
-    patientName: "Jennifer Lee",
-    date: "Dec 21",
-    time: "3:45 PM",
-    type: "Follow-up",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "8",
-    patientName: "Thomas Anderson",
-    date: "Dec 22",
-    time: "10:00 AM",
-    type: "Consultation",
-    status: "pending",
-    avatar: "person",
-  },
-  {
-    id: "9",
-    patientName: "Maria Garcia",
-    date: "Dec 22",
-    time: "1:30 PM",
-    type: "Check-up",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "10",
-    patientName: "James Wilson",
-    date: "Dec 23",
-    time: "11:45 AM",
-    type: "Emergency",
-    status: "pending",
-    avatar: "person",
-  },
-  {
-    id: "11",
-    patientName: "Amanda Clark",
-    date: "Dec 23",
-    time: "4:00 PM",
-    type: "Lab Results",
-    status: "confirmed",
-    avatar: "person",
-  },
-  {
-    id: "12",
-    patientName: "Daniel Martinez",
-    date: "Dec 24",
-    time: "9:30 AM",
-    type: "Routine",
-    status: "confirmed",
-    avatar: "person",
-  },
-];
-
 export default function AllAppointmentsPage() {
+  const [appointments, setAppointments] = useState<AppointmentDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
+      const token = await authStorage.getAuthToken();
+      if (token) {
+        const response = await apiService.getDoctorAppointments(token);
+        if (response.success && response.data) {
+          // Convert backend appointments to display format
+          const displayAppointments: AppointmentDisplay[] = response.data
+            .filter(apt => apt.status === 'scheduled' || apt.status === 'confirmed' || apt.status === 'pending')
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(apt => {
+              const appointmentDate = new Date(apt.date);
+              const today = new Date();
+              const diffTime = appointmentDate.getTime() - today.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              
+              let dateDisplay = '';
+              if (diffDays === 1) {
+                dateDisplay = 'Tomorrow';
+              } else if (diffDays === 0) {
+                dateDisplay = 'Today';
+              } else if (diffDays < 0) {
+                dateDisplay = appointmentDate.toLocaleDateString();
+              } else {
+                dateDisplay = appointmentDate.toLocaleDateString();
+              }
+              
+              return {
+                id: apt._id,
+                patientName: apt.patient?.name ? apt.patient.name : `Appointment ${apt._id.slice(-4)}`,
+                date: dateDisplay,
+                time: typeof apt.time === 'string' ? apt.time : `${apt.time}:00`,
+                type: apt.type || 'Appointment',
+                status: apt.status as any,
+                avatar: "person",
+              };
+            });
+          
+          setAppointments(displayAppointments);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -165,7 +112,7 @@ export default function AllAppointmentsPage() {
     }
   };
 
-  const renderAppointmentCard = (appointment: Appointment) => (
+  const renderAppointmentCard = (appointment: AppointmentDisplay) => (
     <TouchableOpacity
       key={appointment.id}
       style={styles.appointmentCard}
@@ -179,7 +126,7 @@ export default function AllAppointmentsPage() {
           style={styles.avatar}
         >
           <Ionicons
-            name={appointment.avatar as any}
+            name="person"
             size={20}
             color="#ffffff"
           />
@@ -203,13 +150,13 @@ export default function AllAppointmentsPage() {
     </TouchableOpacity>
   );
 
-  const confirmedAppointments = allAppointments.filter(
+  const confirmedAppointments = appointments.filter(
     (a) => a.status === "confirmed"
   );
-  const pendingAppointments = allAppointments.filter(
+  const pendingAppointments = appointments.filter(
     (a) => a.status === "pending"
   );
-  const completedAppointments = allAppointments.filter(
+  const completedAppointments = appointments.filter(
     (a) => a.status === "completed"
   );
 
@@ -240,7 +187,7 @@ export default function AllAppointmentsPage() {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{allAppointments.length}</Text>
+            <Text style={styles.statNumber}>{appointments.length}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statDivider} />
@@ -267,8 +214,18 @@ export default function AllAppointmentsPage() {
         {/* Appointments List */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.appointmentsList}>
-            {allAppointments.map((appointment) =>
-              renderAppointmentCard(appointment)
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading appointments...</Text>
+              </View>
+            ) : appointments.length > 0 ? (
+              appointments.map((appointment) =>
+                renderAppointmentCard(appointment)
+              )
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No appointments found</Text>
+              </View>
             )}
           </View>
         </ScrollView>
@@ -441,5 +398,27 @@ const styles = StyleSheet.create({
   },
   statusTextCancelled: {
     color: "#dc2626",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6b7280",
+    fontWeight: "500",
   },
 });

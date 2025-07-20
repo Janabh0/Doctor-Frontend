@@ -1,16 +1,18 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  TextInput,
-} from "react-native";
+import { apiService, Appointment } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface Patient {
   id: string;
@@ -20,49 +22,49 @@ interface Patient {
   status: "today" | "upcoming";
 }
 
-const patientsData: Patient[] = [
-  {
-    id: "1",
-    name: "Ethan Harper",
-    time: "10:00 AM",
-    avatar: "person",
-    status: "today",
-  },
-  {
-    id: "2",
-    name: "Olivia Bennett",
-    time: "11:30 AM",
-    avatar: "person",
-    status: "today",
-  },
-  {
-    id: "3",
-    name: "Noah Carter",
-    time: "1:00 PM",
-    avatar: "person",
-    status: "today",
-  },
-  {
-    id: "4",
-    name: "Sophia Evans",
-    time: "2:30 PM",
-    avatar: "person",
-    status: "today",
-  },
-  {
-    id: "5",
-    name: "Liam Foster",
-    time: "6:00 PM",
-    avatar: "person",
-    status: "upcoming",
-  },
-];
-
 export default function PatientsPage() {
   const [activeFilter, setActiveFilter] = useState<
     "all" | "today" | "upcoming"
   >("all");
   const [searchText, setSearchText] = useState("");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
+      const token = await authStorage.getAuthToken();
+      if (token) {
+        const response = await apiService.getDoctorAppointments(token);
+        if (response.success && response.data) {
+          setAppointments(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert appointments to patient format
+  const patientsData: Patient[] = appointments.map(apt => {
+    const appointmentDate = new Date(apt.date);
+    const today = new Date();
+    const isToday = appointmentDate.toDateString() === today.toDateString();
+    
+    return {
+      id: apt._id,
+      name: apt.patient?.name || `${apt.type} - ${appointmentDate.toLocaleDateString()}`,
+      time: typeof apt.time === 'string' ? apt.time : `${apt.time}:00`,
+      avatar: "person",
+      status: isToday ? "today" : "upcoming",
+    };
+  });
 
   const filteredPatients = patientsData.filter((patient) => {
     const matchesSearch = patient.name
@@ -187,7 +189,15 @@ export default function PatientsPage() {
       {/* Patients List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.patientsList}>
-          {filteredPatients.map((patient) => renderPatientCard(patient))}
+          {loading ? (
+            <Text style={styles.emptyText}>Loading patients...</Text>
+          ) : filteredPatients.length > 0 ? (
+            filteredPatients.map((patient) => renderPatientCard(patient))
+          ) : (
+            <Text style={styles.emptyText}>
+              {searchText ? 'No patients found matching your search' : 'No patients found'}
+            </Text>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -201,7 +211,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 40, // Increased from 16 to create space from clock
     paddingBottom: 20,
     backgroundColor: "#ffffff",
   },
@@ -322,5 +332,11 @@ const styles = StyleSheet.create({
   patientTime: {
     fontSize: 14,
     color: "#6b7280",
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 20,
   },
 });

@@ -1,25 +1,17 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from "react-native";
+import { apiService, Appointment } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface Appointment {
-  id: string;
-  patientName: string;
-  time: string;
-  type: string;
-  date: string;
-  avatar: string;
-  status: "confirmed" | "pending" | "completed";
-}
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface CalendarDay {
   date: number;
@@ -28,81 +20,6 @@ interface CalendarDay {
   isToday: boolean;
   isSelected: boolean;
 }
-
-const appointmentsData: Appointment[] = [
-  {
-    id: "1",
-    patientName: "Ethan Harper",
-    time: "9:00 AM",
-    type: "Routine Checkup",
-    date: "2024-01-15",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "2",
-    patientName: "Olivia Bennett",
-    time: "10:30 AM",
-    type: "Follow-up",
-    date: "2024-01-15",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "3",
-    patientName: "Noah Carter",
-    time: "2:00 PM",
-    type: "Lab Results",
-    date: "2024-01-16",
-    avatar: "person",
-    status: "pending",
-  },
-  {
-    id: "4",
-    patientName: "Sophia Evans",
-    time: "11:00 AM",
-    type: "Consultation",
-    date: "2024-01-17",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "5",
-    patientName: "Liam Foster",
-    time: "3:30 PM",
-    type: "Physical Exam",
-    date: "2024-01-18",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "6",
-    patientName: "Emma Wilson",
-    time: "9:30 AM",
-    type: "Dermatology",
-    date: "2024-01-19",
-    avatar: "person",
-    status: "pending",
-  },
-  {
-    id: "7",
-    patientName: "James Miller",
-    time: "1:15 PM",
-    type: "Cardiology",
-    date: "2024-01-22",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "8",
-    patientName: "Sarah Davis",
-    time: "4:00 PM",
-    type: "Pediatrics",
-    date: "2024-01-23",
-    avatar: "person",
-    status: "confirmed",
-  },
-];
 
 const monthNames = [
   "January",
@@ -124,6 +41,46 @@ const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      console.log('🔄 Calendar: Starting to load appointments...');
+      setLoading(true);
+      const token = await authStorage.getAuthToken();
+      if (token) {
+        console.log('✅ Calendar: Token found, proceeding with API calls');
+        
+        // Debug: Check user data
+        const userData = await authStorage.getUserData();
+        console.log('🔍 Calendar: User data:', userData);
+        console.log('🔍 Calendar: User ID:', userData?._id);
+        
+        console.log('📋 Calendar: Fetching appointments...');
+        const response = await apiService.getDoctorAppointments(token);
+        console.log('📋 Calendar: Appointments response:', response);
+        
+        if (response.success && response.data) {
+          console.log('✅ Calendar: Appointments loaded successfully:', response.data.length, 'appointments');
+          console.log('📋 Calendar: First appointment sample:', response.data[0]);
+          setAppointments(response.data);
+        } else {
+          console.error('❌ Calendar: Failed to load appointments:', response.error);
+        }
+      } else {
+        console.error('❌ Calendar: No authentication token found');
+      }
+    } catch (error) {
+      console.error('💥 Calendar: Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Generate calendar days for current month
   const generateCalendarDays = (): CalendarDay[] => {
@@ -142,8 +99,8 @@ export default function AppointmentsPage() {
       currentDate.setDate(startDate.getDate() + i);
 
       const dateString = currentDate.toISOString().split("T")[0];
-      const appointmentCount = appointmentsData.filter(
-        (apt) => apt.date === dateString
+      const appointmentCount = appointments.filter(
+        (apt) => new Date(apt.date).toISOString().split("T")[0] === dateString
       ).length;
 
       days.push({
@@ -160,13 +117,15 @@ export default function AppointmentsPage() {
 
   const getAppointmentsForSelectedDate = (): Appointment[] => {
     const selectedDateString = selectedDate.toISOString().split("T")[0];
-    return appointmentsData.filter((apt) => apt.date === selectedDateString);
+    return appointments.filter(
+      (apt) => new Date(apt.date).toISOString().split("T")[0] === selectedDateString
+    );
   };
 
   const getUpcomingAppointments = (): Appointment[] => {
-    const today = new Date().toISOString().split("T")[0];
-    return appointmentsData
-      .filter((apt) => apt.date >= today)
+    const today = new Date();
+    return appointments
+      .filter((apt) => new Date(apt.date) >= today)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 5);
   };
@@ -193,6 +152,11 @@ export default function AppointmentsPage() {
     const selectedDay = new Date(startDate);
     selectedDay.setDate(startDate.getDate() + dayIndex);
     setSelectedDate(selectedDay);
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Calendar: Manual refresh triggered');
+    await loadAppointments();
   };
 
   const renderAppointmentCard = (appointment: Appointment) => {
@@ -224,7 +188,7 @@ export default function AppointmentsPage() {
 
     return (
       <TouchableOpacity
-        key={appointment.id}
+        key={appointment._id}
         style={styles.appointmentCard}
         activeOpacity={0.7}
       >
@@ -236,15 +200,19 @@ export default function AppointmentsPage() {
             style={styles.avatar}
           >
             <Ionicons
-              name={appointment.avatar as any}
+              name="person"
               size={24}
               color="#ffffff"
             />
           </LinearGradient>
           <View style={styles.appointmentDetails}>
-            <Text style={styles.patientName}>{appointment.patientName}</Text>
+            <Text style={styles.patientName}>
+              {appointment.patient?.name || `${appointment.type} - ${new Date(appointment.date).toLocaleDateString()}`}
+            </Text>
             <Text style={styles.appointmentType}>{appointment.type}</Text>
-            <Text style={styles.appointmentTime}>{appointment.time}</Text>
+            <Text style={styles.appointmentTime}>
+              {typeof appointment.time === 'string' ? appointment.time : `${appointment.time}:00`}
+            </Text>
           </View>
         </View>
         <View style={[styles.statusBadge, getStatusStyle(appointment.status)]}>
@@ -271,8 +239,8 @@ export default function AppointmentsPage() {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.pageTitle}>Appointments</Text>
-          <TouchableOpacity style={styles.addButton} activeOpacity={0.7}>
-            <Ionicons name="add" size={24} color="#4DA8DA" />
+          <TouchableOpacity style={styles.addButton} activeOpacity={0.7} onPress={handleRefresh}>
+            <Ionicons name="refresh" size={24} color="#4DA8DA" />
           </TouchableOpacity>
         </View>
       </View>
@@ -342,27 +310,37 @@ export default function AppointmentsPage() {
         </View>
 
         {/* Selected Date Appointments */}
-        {selectedDateAppointments.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {selectedDate.toDateString() === new Date().toDateString()
-                ? "Today's Appointments"
-                : `Appointments for ${selectedDate.toLocaleDateString()}`}
-            </Text>
-            <View style={styles.appointmentsList}>
-              {selectedDateAppointments.map((appointment) =>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {selectedDate.toDateString() === new Date().toDateString()
+              ? "Today's Appointments"
+              : `Appointments for ${selectedDate.toLocaleDateString()}`}
+          </Text>
+          <View style={styles.appointmentsList}>
+            {loading ? (
+              <Text style={styles.emptyText}>Loading appointments...</Text>
+            ) : selectedDateAppointments.length > 0 ? (
+              selectedDateAppointments.map((appointment) =>
                 renderAppointmentCard(appointment)
-              )}
-            </View>
+              )
+            ) : (
+              <Text style={styles.emptyText}>No appointments for this date</Text>
+            )}
           </View>
-        )}
+        </View>
 
         {/* Upcoming Appointments */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
           <View style={styles.appointmentsList}>
-            {upcomingAppointments.map((appointment) =>
-              renderAppointmentCard(appointment)
+            {loading ? (
+              <Text style={styles.emptyText}>Loading appointments...</Text>
+            ) : upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appointment) =>
+                renderAppointmentCard(appointment)
+              )
+            ) : (
+              <Text style={styles.emptyText}>No upcoming appointments</Text>
             )}
           </View>
         </View>
@@ -378,7 +356,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 40, // Increased from 16 to create space from clock
     paddingBottom: 20,
     backgroundColor: "#ffffff",
   },
@@ -590,5 +568,11 @@ const styles = StyleSheet.create({
   },
   statusTextCompleted: {
     color: "#4f46e5",
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    paddingVertical: 20,
+    fontSize: 16,
   },
 });

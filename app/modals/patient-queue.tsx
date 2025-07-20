@@ -1,17 +1,19 @@
 "use client";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from "react-native";
+import { apiService, Appointment } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface Patient {
   id: string;
@@ -23,82 +25,78 @@ interface Patient {
   avatar: string;
 }
 
-const patientQueue: Patient[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    age: "28 years",
-    condition: "Fever & Cough",
-    waitTime: "5 min",
-    priority: "high",
-    avatar: "person",
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    age: "45 years",
-    condition: "Back Pain",
-    waitTime: "12 min",
-    priority: "medium",
-    avatar: "person",
-  },
-  {
-    id: "3",
-    name: "Emily Davis",
-    age: "32 years",
-    condition: "Headache",
-    waitTime: "8 min",
-    priority: "medium",
-    avatar: "person",
-  },
-  {
-    id: "4",
-    name: "David Wilson",
-    age: "67 years",
-    condition: "Chest Pain",
-    waitTime: "3 min",
-    priority: "high",
-    avatar: "person",
-  },
-  {
-    id: "5",
-    name: "Lisa Brown",
-    age: "29 years",
-    condition: "Allergy",
-    waitTime: "15 min",
-    priority: "low",
-    avatar: "person",
-  },
-  {
-    id: "6",
-    name: "Robert Taylor",
-    age: "51 years",
-    condition: "Diabetes Check",
-    waitTime: "20 min",
-    priority: "low",
-    avatar: "person",
-  },
-  {
-    id: "7",
-    name: "Jennifer Lee",
-    age: "38 years",
-    condition: "Sore Throat",
-    waitTime: "10 min",
-    priority: "medium",
-    avatar: "person",
-  },
-  {
-    id: "8",
-    name: "Thomas Anderson",
-    age: "42 years",
-    condition: "Eye Problem",
-    waitTime: "7 min",
-    priority: "medium",
-    avatar: "person",
-  },
-];
-
 export default function PatientQueuePage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
+      const token = await authStorage.getAuthToken();
+      if (token) {
+        const response = await apiService.getDoctorAppointments(token);
+        if (response.success && response.data) {
+          setAppointments(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert appointments to patient queue format
+  const patientQueue: Patient[] = appointments
+    .filter(apt => apt.status === 'waiting' || apt.status === 'pending')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .map((apt, index) => {
+      // Calculate wait time based on appointment date vs current time
+      const appointmentDate = new Date(apt.date);
+      const now = new Date();
+      const diffTime = appointmentDate.getTime() - now.getTime();
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      let waitTime = '';
+      if (diffMinutes < 0) {
+        // Appointment is in the past
+        waitTime = 'Overdue';
+      } else if (diffMinutes < 60) {
+        // Less than 1 hour
+        waitTime = `${diffMinutes} min`;
+      } else if (diffHours < 24) {
+        // Less than 1 day
+        waitTime = `${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+      } else {
+        // More than 1 day
+        waitTime = `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+      }
+      
+      // Determine priority based on appointment type and time until appointment
+      let priority: "high" | "medium" | "low" = "medium";
+      if (apt.type.toLowerCase().includes('emergency') || diffMinutes < 30) {
+        priority = "high";
+      } else if (apt.type.toLowerCase().includes('routine') || diffDays > 7) {
+        priority = "low";
+      }
+      
+      return {
+        id: apt._id,
+        name: apt.patient?.name || 'Unknown Patient',
+        age: "Unknown", // Backend doesn't provide age
+        condition: apt.type,
+        waitTime,
+        priority,
+        avatar: "person",
+      };
+    });
+
   const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case "high":
@@ -225,7 +223,17 @@ export default function PatientQueuePage() {
         {/* Patient Queue List */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.queueList}>
-            {patientQueue.map((patient) => renderPatientCard(patient))}
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading patient queue...</Text>
+              </View>
+            ) : patientQueue.length > 0 ? (
+              patientQueue.map((patient) => renderPatientCard(patient))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No patients in queue</Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -398,6 +406,28 @@ const styles = StyleSheet.create({
   },
   waitTime: {
     fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
     color: "#6b7280",
     fontWeight: "500",
   },

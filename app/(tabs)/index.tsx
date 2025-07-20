@@ -1,16 +1,19 @@
 "use client";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from "react-native";
+import { apiService, Appointment } from "@/services/api";
+import { authStorage, UserData } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface Patient {
   id: string;
@@ -21,60 +24,205 @@ interface Patient {
   status?: string;
 }
 
-const todaysAppointments: Patient[] = [
-  {
-    id: "1",
-    name: "Patient: Ethan Carter",
-    time: "9:00 AM - Check up",
-    type: "Routine",
-    avatar: "person",
-  },
-  {
-    id: "2",
-    name: "Patient: Olivia Bennett",
-    time: "10:30 AM - Follow up",
-    type: "Follow-up",
-    avatar: "person",
-  },
-  {
-    id: "3",
-    name: "Patient: Noah Thompson",
-    time: "1:00 PM - Lab Results",
-    type: "Results",
-    avatar: "person",
-  },
-];
-
-const patientQueue: Patient[] = [
-  {
-    id: "4",
-    name: "Patient: Ava Harper",
-    time: "Waiting for 10 min",
-    type: "Walk-in",
-    avatar: "person",
-    status: "waiting",
-  },
-  {
-    id: "5",
-    name: "Patient: Liam Foster",
-    time: "Due in 5 min",
-    type: "Scheduled",
-    avatar: "person",
-    status: "upcoming",
-  },
-];
-
-const quickActions = [
-  { id: "1", title: "View Call", icon: "videocam-outline" },
-  { id: "2", title: "Schedule", icon: "calendar-outline" },
-];
-
 export default function DoctorDashboard() {
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadAppointments = async () => {
+    try {
+      console.log('🔄 Starting to load appointments...');
+      const token = await authStorage.getAuthToken();
+      if (token) {
+        console.log('✅ Token found, proceeding with API calls');
+        
+        // Debug: Check user data and role
+        const userData = await authStorage.getUserData();
+        console.log('🔍 User data:', userData);
+        console.log('🔍 User role:', userData?.role);
+        console.log('🔍 User ID:', userData?._id);
+        
+        // First test basic connectivity
+        console.log('🌐 Testing basic connectivity...');
+        const connectivityResponse = await apiService.testBasicConnectivity();
+        console.log('🌐 Connectivity result:', connectivityResponse);
+        
+        if (!connectivityResponse.success) {
+          console.error('❌ Cannot reach server:', connectivityResponse.error);
+          return;
+        }
+        
+        // Then test server health
+        console.log('🏥 Testing server health...');
+        const healthResponse = await apiService.testServerHealth();
+        console.log('🏥 Server health result:', healthResponse);
+        
+        // Then test appointments endpoints
+        console.log('🧪 Testing appointments endpoints...');
+        const testResponse = await apiService.testAppointmentsEndpoint();
+        console.log('🧪 Endpoint test result:', testResponse);
+        
+        // Finally try to fetch appointments
+        console.log('📋 Fetching appointments...');
+        const appointmentsResponse = await apiService.getDoctorAppointments(token);
+        console.log('📋 Appointments response:', appointmentsResponse);
+        
+        if (appointmentsResponse.success && appointmentsResponse.data) {
+          console.log('✅ Appointments loaded successfully:', appointmentsResponse.data.length, 'appointments');
+          console.log('📋 First appointment sample:', appointmentsResponse.data[0]);
+          setAppointments(appointmentsResponse.data);
+        } else {
+          console.error('❌ Failed to load appointments:', appointmentsResponse.error);
+        }
+      } else {
+        console.error('❌ No authentication token found');
+      }
+    } catch (error) {
+      console.error('💥 Error loading appointments:', error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh triggered');
+    setLoading(true);
+    await loadAppointments();
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await authStorage.getUserData();
+        setUserData(data);
+        
+        if (data) {
+          await loadAppointments();
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Convert appointments to Patient format for display
+  const todaysAppointments: Patient[] = appointments
+    .filter(apt => {
+      const appointmentDate = new Date(apt.date);
+      const today = new Date();
+      const isToday = appointmentDate.toDateString() === today.toDateString();
+      return isToday && (apt.status === 'scheduled' || apt.status === 'confirmed' || apt.status?.toLowerCase().includes('pending'));
+    })
+    .sort((a, b) => {
+      // Handle time as string or number
+      const timeA = typeof a.time === 'string' ? a.time : `${a.time}:00`;
+      const timeB = typeof b.time === 'string' ? b.time : `${b.time}:00`;
+      return new Date(`2000-01-01T${timeA}`).getTime() - new Date(`2000-01-01T${timeB}`).getTime();
+    })
+    .slice(0, 3)
+    .map(apt => ({
+      id: apt._id,
+      name: apt.patient?.name ? `Patient: ${apt.patient.name}` : `${apt.type || 'Appointment'} - ${new Date(apt.date).toLocaleDateString()}`,
+      time: `${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`} - ${apt.type || 'Appointment'}`,
+      type: apt.type || 'Appointment',
+      avatar: "person",
+    }));
+
+  const upcomingAppointments: Patient[] = appointments
+    .filter(apt => {
+      const appointmentDate = new Date(apt.date);
+      const today = new Date();
+      const isFuture = appointmentDate > today;
+      return isFuture && (apt.status === 'scheduled' || apt.status === 'confirmed' || apt.status?.toLowerCase().includes('pending'));
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 3)
+    .map(apt => {
+      const appointmentDate = new Date(apt.date);
+      const today = new Date();
+      const diffTime = appointmentDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      let timeDisplay = '';
+      if (diffDays === 1) {
+        timeDisplay = `Tomorrow at ${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`}`;
+      } else if (diffDays === 0) {
+        timeDisplay = `Today at ${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`}`;
+      } else {
+        timeDisplay = `${appointmentDate.toLocaleDateString()} at ${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`}`;
+      }
+      
+      return {
+        id: apt._id,
+        name: apt.patient?.name ? `Patient: ${apt.patient.name}` : `${apt.type || 'Appointment'} - ${appointmentDate.toLocaleDateString()}`,
+        time: `${timeDisplay} - ${apt.type || 'Appointment'}`,
+        type: apt.type || 'Appointment',
+        avatar: "person",
+      };
+    });
+
+  const patientQueue: Patient[] = appointments
+    .filter(apt => apt.status?.toLowerCase().includes('waiting') || apt.status?.toLowerCase().includes('pending'))
+    .slice(0, 2)
+    .map(apt => {
+      const appointmentDate = new Date(apt.date);
+      const now = new Date();
+      const diffTime = appointmentDate.getTime() - now.getTime();
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      let timeDisplay = '';
+      if (diffMinutes < 0) {
+        // Appointment is in the past
+        timeDisplay = 'Overdue';
+      } else if (diffMinutes < 60) {
+        // Less than 1 hour
+        timeDisplay = `Due in ${diffMinutes} min`;
+      } else if (diffHours < 24) {
+        // Less than 1 day
+        timeDisplay = `Due in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+      } else {
+        // More than 1 day
+        timeDisplay = `Due in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+      }
+      
+      return {
+        id: apt._id,
+        name: apt.patient?.name ? `Patient: ${apt.patient.name}` : `${apt.type || 'Appointment'} - ${new Date(apt.date).toLocaleDateString()}`,
+        time: timeDisplay,
+        type: apt.type || 'Appointment',
+        avatar: "person",
+        status: apt.status || 'pending',
+      };
+    });
+
+  const quickActions = [
+    { id: "1", title: "View Call", icon: "videocam-outline" },
+    { id: "2", title: "Schedule", icon: "calendar-outline" },
+  ];
+
   const renderPatientCard = (patient: Patient, showStatus = false) => (
     <TouchableOpacity
       key={patient.id}
       style={styles.patientCard}
       activeOpacity={0.7}
+      onPress={() => {
+        // Find the original appointment data
+        const originalAppointment = appointments.find(apt => apt._id === patient.id);
+        if (originalAppointment) {
+          // Navigate to patient details with appointment data
+          router.push({
+            pathname: "/modals/appointment-details",
+            params: {
+              appointment: JSON.stringify(originalAppointment)
+            }
+          });
+        }
+      }}
     >
       <View style={styles.patientInfo}>
         <LinearGradient
@@ -132,9 +280,14 @@ export default function DoctorDashboard() {
           </LinearGradient>
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeBack}>Welcome Back</Text>
-            <Text style={styles.doctorName}>Dr. Williamson</Text>
+            <Text style={styles.doctorName}>
+              {userData ? `Dr. ${userData.name}` : 'Loading...'}
+            </Text>
           </View>
           <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
+              <Ionicons name="refresh-outline" size={20} color="#4DA8DA" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
               <Ionicons name="notifications" size={20} color="#4DA8DA" />
             </TouchableOpacity>
@@ -143,7 +296,14 @@ export default function DoctorDashboard() {
       </View>
 
       {/* Search Banner - Fixed at top */}
-      <View style={styles.searchBannerContainer}>
+      <TouchableOpacity 
+        style={styles.searchBannerContainer}
+        onPress={() => {
+          console.log('🔍 Search banner tapped - navigating to search');
+          router.push("/search-patients");
+        }}
+        activeOpacity={0.8}
+      >
         <LinearGradient
           colors={["#7BC8E8", "#6BB8D8", "#5BA8C8", "#4B98B8", "#5BA8C8"]}
           start={{ x: 0, y: 0 }}
@@ -165,11 +325,11 @@ export default function DoctorDashboard() {
             </View>
           </View>
         </LinearGradient>
-      </View>
+      </TouchableOpacity>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Today's Appointments */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.firstSection]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Appointments</Text>
             <TouchableOpacity
@@ -179,7 +339,34 @@ export default function DoctorDashboard() {
             </TouchableOpacity>
           </View>
           <View style={styles.sectionContent}>
-            {todaysAppointments.map((patient) => renderPatientCard(patient))}
+            {loading ? (
+              <Text style={styles.emptyText}>Loading appointments...</Text>
+            ) : todaysAppointments.length > 0 ? (
+              todaysAppointments.map((patient) => renderPatientCard(patient))
+            ) : (
+              <Text style={styles.emptyText}>No appointments scheduled for today</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Upcoming Appointments */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/modals/all-appointments")}
+            >
+              <Text style={styles.seeAllText}>See All {">"}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.sectionContent}>
+            {loading ? (
+              <Text style={styles.emptyText}>Loading upcoming appointments...</Text>
+            ) : upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((patient) => renderPatientCard(patient))
+            ) : (
+              <Text style={styles.emptyText}>No upcoming appointments</Text>
+            )}
           </View>
         </View>
 
@@ -194,7 +381,13 @@ export default function DoctorDashboard() {
             </TouchableOpacity>
           </View>
           <View style={styles.sectionContent}>
-            {patientQueue.map((patient) => renderPatientCard(patient, true))}
+            {loading ? (
+              <Text style={styles.emptyText}>Loading queue...</Text>
+            ) : patientQueue.length > 0 ? (
+              patientQueue.map((patient) => renderPatientCard(patient, true))
+            ) : (
+              <Text style={styles.emptyText}>No patients in queue</Text>
+            )}
           </View>
         </View>
 
@@ -219,7 +412,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 40, // Increased from 20 to create space from clock
     paddingBottom: 24,
     backgroundColor: "#ffffff",
   },
@@ -228,25 +421,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profilePic: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14, // Increased from 12 to 14
   },
   welcomeText: {
     flex: 1,
+    justifyContent: "center", // Center the text vertically
+    paddingVertical: 4, // Add some padding for better alignment
   },
   welcomeBack: {
     fontSize: 14,
     color: "#6b7280",
-    marginBottom: 2,
+    marginBottom: 4, // Increased from 2 to 4
   },
   doctorName: {
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
+    lineHeight: 26, // Increased from 24 to 26
   },
   headerIcons: {
     flexDirection: "row",
@@ -262,7 +458,7 @@ const styles = StyleSheet.create({
   },
   searchBannerContainer: {
     position: "absolute",
-    top: 160,
+    top: 120, // Reduced from 140 to bring it much closer to doctor name
     left: 20,
     right: 20,
     zIndex: 1000,
@@ -311,10 +507,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 160,
+    paddingTop: 140, // Reduced from 160 to match new banner position
   },
   section: {
     marginBottom: 32,
+  },
+  firstSection: {
+    marginTop: 10, // Reduced from 20 to make it closer
   },
   sectionHeader: {
     flexDirection: "row",
@@ -398,5 +597,10 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginLeft: 12,
     fontWeight: "500",
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    paddingVertical: 20,
   },
 });

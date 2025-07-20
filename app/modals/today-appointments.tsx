@@ -1,84 +1,113 @@
 "use client";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from "react-native";
+import { apiService, Appointment } from "@/services/api";
+import { authStorage } from "@/services/authStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
-interface Appointment {
+interface AppointmentDisplay {
   id: string;
   patientName: string;
   time: string;
   type: string;
   avatar: string;
-  status: "confirmed" | "pending" | "completed";
+  status: "confirmed" | "pending" | "completed" | "scheduled" | "waiting";
 }
 
-const todaysAppointments: Appointment[] = [
-  {
-    id: "1",
-    patientName: "Patient: Ethan Carter",
-    time: "9:00 AM - Check up",
-    type: "Routine",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "2",
-    patientName: "Patient: Olivia Bennett",
-    time: "10:30 AM - Follow up",
-    type: "Follow-up",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "3",
-    patientName: "Patient: Noah Thompson",
-    time: "1:00 PM - Lab Results",
-    type: "Results",
-    avatar: "person",
-    status: "pending",
-  },
-  {
-    id: "4",
-    patientName: "Patient: Ava Harper",
-    time: "2:30 PM - Consultation",
-    type: "Consultation",
-    avatar: "person",
-    status: "confirmed",
-  },
-  {
-    id: "5",
-    patientName: "Patient: Liam Foster",
-    time: "4:00 PM - Emergency",
-    type: "Emergency",
-    avatar: "person",
-    status: "pending",
-  },
-  {
-    id: "6",
-    patientName: "Patient: Sophia Rodriguez",
-    time: "5:30 PM - Check up",
-    type: "Routine",
-    avatar: "person",
-    status: "confirmed",
-  },
-];
-
 export default function TodayAppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadAppointments = async () => {
+      try {
+        console.log('🔄 Loading today\'s appointments...');
+        const token = await authStorage.getAuthToken();
+        console.log('🔑 Token exists:', !!token);
+        console.log('🔑 Token length:', token?.length || 0);
+        
+        if (token) {
+          const response = await apiService.getDoctorAppointments(token);
+          console.log('📋 Appointments response:', response);
+          
+          if (response.success && response.data) {
+            console.log('✅ Appointments loaded:', response.data.length, 'appointments');
+            console.log('📅 Sample appointment:', response.data[0]);
+            console.log('📅 All appointments data:', JSON.stringify(response.data, null, 2));
+            setAppointments(response.data);
+          } else {
+            console.error('❌ Failed to load appointments:', response.error);
+            console.error('❌ Full response:', response);
+          }
+        } else {
+          console.error('❌ No authentication token found');
+          console.error('❌ Please make sure you are logged in');
+        }
+      } catch (error) {
+        console.error('💥 Error loading appointments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAppointments();
+  }, []);
+
+  // Convert backend appointments to display format - filter for today only
+  const todaysAppointments: AppointmentDisplay[] = appointments
+    .filter(apt => {
+      try {
+        const appointmentDate = new Date(apt.date);
+        const today = new Date();
+        
+        // Reset time to compare only dates
+        const aptDateOnly = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        const isToday = aptDateOnly.getTime() === todayOnly.getTime();
+        
+        console.log(`📅 Appointment date: ${apt.date} -> ${aptDateOnly.toDateString()}`);
+        console.log(`📅 Today: ${todayOnly.toDateString()}`);
+        console.log(`📅 Is today: ${isToday}`);
+        
+        return isToday;
+      } catch (error) {
+        console.error('❌ Error parsing appointment date:', apt.date, error);
+        return false;
+      }
+    })
+    .sort((a, b) => {
+      // Handle time as string or number
+      const timeA = typeof a.time === 'string' ? a.time : `${a.time}:00`;
+      const timeB = typeof b.time === 'string' ? b.time : `${b.time}:00`;
+      return new Date(`2000-01-01T${timeA}`).getTime() - new Date(`2000-01-01T${timeB}`).getTime();
+    })
+    .map(apt => ({
+      id: apt._id,
+      patientName: `Patient: ${apt.patient?.name || 'Unknown'}`,
+      time: `${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`} - ${apt.type}`,
+      type: apt.type,
+      avatar: "person",
+      status: apt.status as any,
+    }));
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case "confirmed":
+      case "scheduled":
         return styles.statusConfirmed;
       case "pending":
+      case "waiting":
         return styles.statusPending;
       case "completed":
         return styles.statusCompleted;
@@ -90,8 +119,10 @@ export default function TodayAppointmentsPage() {
   const getStatusTextStyle = (status: string) => {
     switch (status) {
       case "confirmed":
+      case "scheduled":
         return styles.statusTextConfirmed;
       case "pending":
+      case "waiting":
         return styles.statusTextPending;
       case "completed":
         return styles.statusTextCompleted;
@@ -100,7 +131,7 @@ export default function TodayAppointmentsPage() {
     }
   };
 
-  const renderAppointmentCard = (appointment: Appointment) => (
+  const renderAppointmentCard = (appointment: AppointmentDisplay) => (
     <TouchableOpacity
       key={appointment.id}
       style={styles.appointmentCard}
@@ -188,8 +219,23 @@ export default function TodayAppointmentsPage() {
         {/* Appointments List */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.appointmentsList}>
-            {todaysAppointments.map((appointment) =>
-              renderAppointmentCard(appointment)
+            {loading ? (
+              <Text style={styles.emptyText}>Loading appointments...</Text>
+            ) : todaysAppointments.length > 0 ? (
+              todaysAppointments.map((appointment) =>
+                renderAppointmentCard(appointment)
+              )
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No appointments found for today</Text>
+                <Text style={styles.debugText}>Total appointments loaded: {appointments.length}</Text>
+                <Text style={styles.debugText}>Today's date: {new Date().toDateString()}</Text>
+                {appointments.length > 0 && (
+                  <Text style={styles.debugText}>Sample appointment date: {appointments[0]?.date}</Text>
+                )}
+                <Text style={styles.debugText}>Please check if you are logged in</Text>
+                <Text style={styles.debugText}>Check console for detailed logs</Text>
+              </View>
             )}
           </View>
         </ScrollView>
@@ -205,7 +251,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 40, // Increased from 16 to create space from clock
     paddingBottom: 20,
     backgroundColor: "#ffffff",
   },
@@ -355,5 +401,21 @@ const styles = StyleSheet.create({
   },
   statusTextCompleted: {
     color: "#4f46e5",
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  debugText: {
+    textAlign: 'center',
+    marginTop: 8,
+    fontSize: 12,
+    color: '#9ca3af',
   },
 });
