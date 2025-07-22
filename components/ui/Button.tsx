@@ -1,12 +1,12 @@
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
-  TouchableOpacity,
-  Text,
   StyleSheet,
-  ViewStyle,
+  Text,
   TextStyle,
+  TouchableOpacity,
+  ViewStyle,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { AppColors } from "../../constants/AppColors";
 
 interface ButtonProps {
@@ -46,13 +46,13 @@ export const Button: React.FC<ButtonProps> = ({
         onPress={onPress}
         disabled={disabled}
         activeOpacity={0.8}
-        style={[styles.button, disabled && styles.disabled, style]}
+        style={[styles.button, disabled && styles.disabled]}
       >
         <LinearGradient
-          colors={["#4DA8DA", "#3A9BCE", "#2A8EC2"]}
+          colors={["#2A4D5F", "#2A4D5F", "#2A4D5F"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.gradientButton, disabled && styles.disabled]}
+          style={[styles.gradientButton, disabled && styles.disabled, style]}
         >
           <Text style={buttonTextStyle}>{title}</Text>
         </LinearGradient>

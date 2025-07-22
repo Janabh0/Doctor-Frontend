@@ -1,18 +1,17 @@
 "use client";
-import { apiService, Appointment } from "@/services/api";
-import { authStorage } from "@/services/authStorage";
+import { Appointment } from "@/services/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
-import { useEffect, useState } from "react";
 import {
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface AppointmentDisplay {
@@ -25,81 +24,68 @@ interface AppointmentDisplay {
 }
 
 export default function TodayAppointmentsPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Hardcode the appointments array with Arabian names for testing
+  const appointments: Appointment[] = [
+    {
+      _id: '1',
+      patient: { _id: 'p1', name: 'Ahmad Al-Farsi', gender: 'male' },
+      doctor: { _id: 'd1', name: 'Dr. Hassan', speciality: 'Cardiology' },
+      date: new Date().toISOString(),
+      time: '21:00', // 9:00 pm
+      type: 'Checkup',
+      status: 'confirmed',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      _id: '2',
+      patient: { _id: 'p2', name: 'Fatima Al-Sabah', gender: 'female' },
+      doctor: { _id: 'd1', name: 'Dr. Hassan', speciality: 'Cardiology' },
+      date: new Date().toISOString(),
+      time: '21:45', // 9:45 pm
+      type: 'Consultation',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      _id: '3',
+      patient: { _id: 'p3', name: 'Layla Al-Mutairi', gender: 'female' },
+      doctor: { _id: 'd1', name: 'Dr. Hassan', speciality: 'Cardiology' },
+      date: new Date().toISOString(),
+      time: '22:30', // 10:30 pm
+      type: 'Follow-up',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+  const loading = false;
 
-  useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        console.log('🔄 Loading today\'s appointments...');
-        const token = await authStorage.getAuthToken();
-        console.log('🔑 Token exists:', !!token);
-        console.log('🔑 Token length:', token?.length || 0);
-        
-        if (token) {
-          const response = await apiService.getDoctorAppointments(token);
-          console.log('📋 Appointments response:', response);
-          
-          if (response.success && response.data) {
-            console.log('✅ Appointments loaded:', response.data.length, 'appointments');
-            console.log('📅 Sample appointment:', response.data[0]);
-            console.log('📅 All appointments data:', JSON.stringify(response.data, null, 2));
-            setAppointments(response.data);
-          } else {
-            console.error('❌ Failed to load appointments:', response.error);
-            console.error('❌ Full response:', response);
-          }
-        } else {
-          console.error('❌ No authentication token found');
-          console.error('❌ Please make sure you are logged in');
-        }
-      } catch (error) {
-        console.error('💥 Error loading appointments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Filter for today's appointments using robust date logic
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    loadAppointments();
-  }, []);
+  const isToday = (aptDate: Date | string) => {
+    const date = new Date(aptDate);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime() === today.getTime();
+  };
 
-  // Convert backend appointments to display format - filter for today only
-  const todaysAppointments: AppointmentDisplay[] = appointments
-    .filter(apt => {
-      try {
-        const appointmentDate = new Date(apt.date);
-        const today = new Date();
-        
-        // Reset time to compare only dates
-        const aptDateOnly = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        
-        const isToday = aptDateOnly.getTime() === todayOnly.getTime();
-        
-        console.log(`📅 Appointment date: ${apt.date} -> ${aptDateOnly.toDateString()}`);
-        console.log(`📅 Today: ${todayOnly.toDateString()}`);
-        console.log(`📅 Is today: ${isToday}`);
-        
-        return isToday;
-      } catch (error) {
-        console.error('❌ Error parsing appointment date:', apt.date, error);
-        return false;
-      }
-    })
-    .sort((a, b) => {
-      // Handle time as string or number
-      const timeA = typeof a.time === 'string' ? a.time : `${a.time}:00`;
-      const timeB = typeof b.time === 'string' ? b.time : `${b.time}:00`;
-      return new Date(`2000-01-01T${timeA}`).getTime() - new Date(`2000-01-01T${timeB}`).getTime();
-    })
-    .map(apt => ({
-      id: apt._id,
-      patientName: `Patient: ${apt.patient?.name || 'Unknown'}`,
-      time: `${typeof apt.time === 'string' ? apt.time : `${apt.time}:00`} - ${apt.type}`,
-      type: apt.type,
-      avatar: "person",
-      status: apt.status as any,
-    }));
+  const todaysAppointments = appointments.filter(apt => isToday(apt.date));
+  const total = todaysAppointments.length;
+  const confirmed = todaysAppointments.filter(apt => apt.status?.toLowerCase() === "confirmed").length;
+  const pending = todaysAppointments.filter(apt => apt.status?.toLowerCase() === "pending").length;
+
+  // Map todaysAppointments to AppointmentDisplay[]
+  const todaysAppointmentsDisplay: AppointmentDisplay[] = todaysAppointments.map(apt => ({
+    id: apt._id,
+    patientName: apt.patient?.name || "Unknown",
+    time: `${typeof apt.time === "string" ? apt.time : `${apt.time}:00`} - ${apt.type}`,
+    type: apt.type,
+    avatar: "person",
+    status: (apt.status?.toLowerCase() || "pending") as AppointmentDisplay["status"],
+  }));
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -131,7 +117,7 @@ export default function TodayAppointmentsPage() {
     }
   };
 
-  const renderAppointmentCard = (appointment: AppointmentDisplay) => (
+  const renderAppointmentCard = (appointment: AppointmentDisplay & { meetingLink?: string }) => (
     <TouchableOpacity
       key={appointment.id}
       style={styles.appointmentCard}
@@ -155,6 +141,15 @@ export default function TodayAppointmentsPage() {
           <Text style={styles.appointmentType}>{appointment.type}</Text>
           <Text style={styles.appointmentTime}>{appointment.time}</Text>
         </View>
+        {/* Meeting icon box */}
+        {appointment.type?.toLowerCase() === 'online' && appointment.meetingLink ? (
+          <TouchableOpacity
+            onPress={() => Linking.openURL(appointment.meetingLink!)}
+            style={{ marginLeft: 12 }}
+          >
+            <Ionicons name="videocam" size={22} color="#2A4D5F" />
+          </TouchableOpacity>
+        ) : null}
       </View>
       <View style={[styles.statusBadge, getStatusStyle(appointment.status)]}>
         <Text
@@ -193,26 +188,21 @@ export default function TodayAppointmentsPage() {
 
         {/* Stats */}
         <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{todaysAppointments.length}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {
-                todaysAppointments.filter((a) => a.status === "confirmed")
-                  .length
-              }
-            </Text>
-            <Text style={styles.statLabel}>Confirmed</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {todaysAppointments.filter((a) => a.status === "pending").length}
-            </Text>
-            <Text style={styles.statLabel}>Pending</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{total}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{confirmed}</Text>
+              <Text style={styles.statLabel}>Confirmed</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{pending}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
           </View>
         </View>
 
@@ -221,8 +211,8 @@ export default function TodayAppointmentsPage() {
           <View style={styles.appointmentsList}>
             {loading ? (
               <Text style={styles.emptyText}>Loading appointments...</Text>
-            ) : todaysAppointments.length > 0 ? (
-              todaysAppointments.map((appointment) =>
+            ) : todaysAppointmentsDisplay.length > 0 ? (
+              todaysAppointmentsDisplay.map(appointment =>
                 renderAppointmentCard(appointment)
               )
             ) : (
@@ -297,10 +287,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statItem: {
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statBox: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statNumber: {
     fontSize: 24,
@@ -314,8 +312,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   statDivider: {
-    width: 1,
-    backgroundColor: "#e5e7eb",
+    width: 1.5,
+    backgroundColor: "#111",
     marginHorizontal: 10,
   },
   content: {
@@ -417,5 +415,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: '#9ca3af',
+  },
+  patientCardContainer: {
+    marginBottom: 16,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#D1E9F6', // subtle light blue
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    padding: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  patientInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  patientDetails: {
+    marginLeft: 12,
   },
 });

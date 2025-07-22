@@ -12,12 +12,11 @@ export const NetworkTest: React.FC = () => {
     setResult('');
 
     try {
-      const response = await apiService.testConnection();
-      
-      if (response.success) {
+      const isConnected = await apiService.testConnection();
+      if (isConnected) {
         setResult('✅ Connection successful! API server is responding.');
       } else {
-        setResult(`❌ API Error: ${response.error}`);
+        setResult('❌ Network Error: Could not connect to API server.');
       }
     } catch (error) {
       setResult(`❌ Network Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -39,9 +38,9 @@ export const NetworkTest: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Network Connection Test</Text>
-      
-      <TouchableOpacity 
-        style={styles.testButton} 
+
+      <TouchableOpacity
+        style={styles.testButton}
         onPress={testConnection}
         disabled={testing}
       >
@@ -50,8 +49,8 @@ export const NetworkTest: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.infoButton} 
+      <TouchableOpacity
+        style={styles.infoButton}
         onPress={showApiUrl}
       >
         <Text style={styles.infoButtonText}>Show API URL</Text>
@@ -142,4 +141,4 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     marginBottom: 4,
   },
-}); 
+});

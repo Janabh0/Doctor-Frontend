@@ -1,161 +1,142 @@
-import { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+
+const BASE_URL = "http://192.168.8.189:5000"; // ✅ your backend server IP
 
 export default function DebugScreen() {
   const [testResults, setTestResults] = useState<string[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
   const addResult = (message: string) => {
-    setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    setTestResults((prev) => [
+      ...prev,
+      `${new Date().toLocaleTimeString()}: ${message}`,
+    ]);
   };
 
-  const testApiConnection = async (url: string) => {
+  const fetchWithTimeout = async (
+    resource: RequestInfo,
+    options: RequestInit = {},
+    timeout = 5000
+  ) => {
+    return Promise.race([
+      fetch(resource, options),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), timeout)
+      ),
+    ]);
+  };
+
+  const testApiHealth = async () => {
     try {
-      addResult(`Testing connection to: ${url}`);
-      
-      // Test with a simple GET request to check if server is reachable
-      const response = await fetch(`${url}/api/providers/auth/login`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
+      addResult(`🌐 Testing API health at ${BASE_URL}`);
+      const response = await fetchWithTimeout(
+        `${BASE_URL}/api/health`,
+        { method: "GET" },
+        5000
+      ) as Response;
 
       if (response.ok) {
-        addResult(`✅ SUCCESS! Server is reachable at ${url}`);
+        addResult("✅ API health check passed!");
       } else {
-        addResult(`❌ Server error: ${response.status} ${response.statusText}`);
+        addResult(`❌ API health error: ${response.status} ${response.statusText}`);
       }
     } catch (error: any) {
-      addResult(`❌ Connection failed: ${error.message}`);
+      addResult(`❌ API health check failed: ${error.message}`);
+    }
+  };
+
+  const testLoginEndpoint = async () => {
+    try {
+      addResult("🔐 Testing login endpoint...");
+      const response = await fetchWithTimeout(
+        `${BASE_URL}/api/providers/auth/login`,
+        {
+          method: "OPTIONS", // Just checking if it responds
+          headers: { "Content-Type": "application/json" },
+        },
+        5000
+      ) as Response;
+
+      if (response.ok) {
+        addResult("✅ Login endpoint is available.");
+      } else {
+        addResult(`❌ Login endpoint error: ${response.status} ${response.statusText}`);
+      }
+    } catch (error: any) {
+      addResult(`❌ Login endpoint failed: ${error.message}`);
     }
   };
 
   const runAllTests = async () => {
     setIsTesting(true);
     setTestResults([]);
-    
-    addResult('🚀 Starting API connection tests...');
-    
-    // Test different URLs for different environments
-    const testUrls = [
-      'http://10.0.2.2:5000',  // Android Emulator
-      'http://localhost:5000',  // iOS Simulator
-      'http://192.168.1.105:5000', // Physical device (your IP)
-      'http://127.0.0.1:5000',  // Localhost alternative
-    ];
 
-    for (const url of testUrls) {
-      await testApiConnection(url);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between tests
-    }
-    
-    addResult('🏁 All tests completed!');
-    setIsTesting(false);
-  };
+    addResult("🚀 Starting all API tests...");
+    await testApiHealth();
+    await new Promise((r) => setTimeout(r, 1000));
+    await testLoginEndpoint();
 
-  const testLogin = async () => {
-    setIsTesting(true);
-    addResult('🔐 Testing login endpoint availability...');
-    
-    try {
-      // Just test if the login endpoint exists and is reachable
-      const response = await fetch('http://10.0.2.2:5000/api/providers/auth/login', {
-        method: 'OPTIONS',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(5000)
-      });
-      
-      if (response.ok) {
-        addResult('✅ Login endpoint is available and reachable');
-      } else {
-        addResult(`❌ Login endpoint error: ${response.status} ${response.statusText}`);
-      }
-    } catch (error: any) {
-      addResult(`❌ Login endpoint error: ${error.message}`);
-    }
-    
+    addResult("🏁 All tests completed!");
     setIsTesting(false);
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a', padding: 20 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#00d4aa', marginBottom: 20 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "#1a1a1a", padding: 20 }}>
+      <Text style={{ fontSize: 24, fontWeight: "bold", color: "#00d4aa", marginBottom: 20 }}>
         🔧 API Debug Tool
       </Text>
-      
-      <Text style={{ color: '#ffffff', marginBottom: 20, lineHeight: 20 }}>
-        This tool will test different API URLs to find which one works with your setup.
+
+      <Text style={{ color: "#ffffff", marginBottom: 20, lineHeight: 20 }}>
+        This tool tests your OnCall backend at <Text style={{ color: "#00d4aa" }}>{BASE_URL}</Text>
       </Text>
 
       <TouchableOpacity
         onPress={runAllTests}
         disabled={isTesting}
         style={{
-          backgroundColor: isTesting ? '#666' : '#00d4aa',
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 10,
-          alignItems: 'center'
-        }}
-      >
-        <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>
-          {isTesting ? '🔄 Testing...' : '🧪 Run All API Tests'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={testLogin}
-        disabled={isTesting}
-        style={{
-          backgroundColor: isTesting ? '#666' : '#007AFF',
+          backgroundColor: isTesting ? "#666" : "#00d4aa",
           padding: 15,
           borderRadius: 10,
           marginBottom: 20,
-          alignItems: 'center'
+          alignItems: "center",
         }}
       >
-        <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>
-          🔐 Test Login Endpoint
+        <Text style={{ color: "#ffffff", fontWeight: "bold" }}>
+          {isTesting ? "🔄 Testing..." : "🧪 Run All Tests"}
         </Text>
       </TouchableOpacity>
 
-      <View style={{ backgroundColor: '#2a2a2a', padding: 15, borderRadius: 10 }}>
-        <Text style={{ color: '#ffffff', fontWeight: 'bold', marginBottom: 10 }}>
+      <View style={{ backgroundColor: "#2a2a2a", padding: 15, borderRadius: 10 }}>
+        <Text style={{ color: "#ffffff", fontWeight: "bold", marginBottom: 10 }}>
           Test Results:
         </Text>
         {testResults.map((result, index) => (
-          <Text key={index} style={{ color: '#cccccc', fontSize: 12, marginBottom: 5 }}>
+          <Text key={index} style={{ color: "#cccccc", fontSize: 12, marginBottom: 5 }}>
             {result}
           </Text>
         ))}
         {testResults.length === 0 && (
-          <Text style={{ color: '#666666', fontStyle: 'italic' }}>
-            No tests run yet. Tap "Run All API Tests" to start.
+          <Text style={{ color: "#666666", fontStyle: "italic" }}>
+            No tests yet. Tap "Run All Tests" to start.
           </Text>
         )}
       </View>
 
-      <View style={{ marginTop: 20, backgroundColor: '#2a2a2a', padding: 15, borderRadius: 10 }}>
-        <Text style={{ color: '#ffffff', fontWeight: 'bold', marginBottom: 10 }}>
+      <View style={{ marginTop: 20, backgroundColor: "#2a2a2a", padding: 15, borderRadius: 10 }}>
+        <Text style={{ color: "#ffffff", fontWeight: "bold", marginBottom: 10 }}>
           📋 Troubleshooting Tips:
         </Text>
-        <Text style={{ color: '#cccccc', fontSize: 12, marginBottom: 5 }}>
-          • Make sure your backend is running on port 5000
+        <Text style={{ color: "#cccccc", fontSize: 12, marginBottom: 5 }}>
+          • Backend must be running at port 5000
         </Text>
-        <Text style={{ color: '#cccccc', fontSize: 12, marginBottom: 5 }}>
-          • Check if your backend has CORS enabled
+        <Text style={{ color: "#cccccc", fontSize: 12, marginBottom: 5 }}>
+          • CORS enabled on backend
         </Text>
-        <Text style={{ color: '#cccccc', fontSize: 12, marginBottom: 5 }}>
-          • For Android emulator, use 10.0.2.2:5000
-        </Text>
-        <Text style={{ color: '#cccccc', fontSize: 12, marginBottom: 5 }}>
-          • For physical device, use your computer's IP address
+        <Text style={{ color: "#cccccc", fontSize: 12, marginBottom: 5 }}>
+          • Phone must be on the same Wi-Fi
         </Text>
       </View>
     </ScrollView>
   );
-} 
+}

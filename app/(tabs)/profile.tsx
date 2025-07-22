@@ -6,16 +6,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    Image,
-    Linking,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface DoctorProfile {
@@ -85,28 +85,19 @@ export default function ProfileScreen() {
       setIsLoadingStats(true);
       const token = await authStorage.getAuthToken();
       if (token) {
-        console.log('🔍 Loading appointment stats...');
         const response = await apiService.getDoctorAppointments(token);
         if (response.success && response.data) {
           const appointments = response.data;
-          console.log('📊 Found appointments:', appointments.length);
-          
           // Calculate unique patients using actual data from database
-          const uniquePatients = new Set(appointments.map(apt => apt.patient?._id || apt.doctor?._id || apt._id)).size;
-          
+          const uniquePatients = new Set(appointments.map(apt => apt.patient?._id)).size;
           // Calculate total appointments
           const totalAppointments = appointments.length;
-          
-          console.log('📊 Stats calculated:', { uniquePatients, totalAppointments });
-          
           // Update doctor data with real statistics
           setDoctorData(prev => prev ? {
             ...prev,
             totalPatients: uniquePatients,
             totalAppointments: totalAppointments,
           } : null);
-        } else {
-          console.log('❌ Failed to load appointments:', response.error);
         }
       }
     } catch (error) {
@@ -117,33 +108,23 @@ export default function ProfileScreen() {
   };
 
   const handleImageUpload = async () => {
-    console.log('📸 Image upload button pressed!');
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log('📸 Permission status:', status);
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Please grant permission to access your photo library');
         return;
       }
-
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
-        console.log('📸 Selected image:', imageUri);
-        
-        // Upload image to backend
         await uploadProfileImage(imageUri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -155,56 +136,41 @@ export default function ProfileScreen() {
         Alert.alert('Error', 'Authentication required');
         return;
       }
-
       if (!doctorData?.id) {
         Alert.alert('Error', 'Doctor ID not found');
         return;
       }
-
-      console.log('📤 Uploading image to backend...');
-      
       const response = await apiService.uploadProfileImage(token, doctorData.id, imageUri);
-
       if (response.success) {
-        // Update local state with new image
         const newImageUrl = response.data?.profileImage || imageUri;
         setDoctorData(prev => prev ? {
           ...prev,
           profileImage: newImageUrl,
         } : null);
-
-        // Update user data in storage
         if (userData) {
           const updatedUserData = { ...userData, profileImage: newImageUrl };
           await authStorage.setUserData(updatedUserData);
         }
-
         Alert.alert('Success', 'Profile photo updated successfully!');
       } else {
         throw new Error(response.error || 'Failed to upload image');
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
       Alert.alert('Error', 'Failed to upload image. Please try again.');
     }
   };
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+      { text: "Cancel", style: "cancel" },
       {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
           try {
             await authStorage.logout();
-            console.log("Logging out...");
             router.replace("/login");
           } catch (error) {
-            console.error('Error during logout:', error);
             router.replace("/login");
           }
         },
@@ -216,23 +182,20 @@ export default function ProfileScreen() {
     setIsLoading(true);
     try {
       await loadAppointmentStats();
-      console.log("Profile data refreshed");
     } catch (error) {
-      console.error('Error refreshing profile:', error);
+      // ignore
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleHelpSupport = () => {
-    // Just open location for now, email and phone are shown as text
     const location = "Free Port, Shuwaikh, Kuwait";
     const url = `https://maps.google.com/?q=${encodeURIComponent(location)}`;
     Linking.openURL(url);
   };
 
   const handleEditEmail = () => {
-    console.log('✏️ Edit email pressed!');
     Alert.prompt(
       "Edit Email",
       "Enter new email address:",
@@ -241,7 +204,6 @@ export default function ProfileScreen() {
         {
           text: "Save",
           onPress: (newEmail) => {
-            console.log('✏️ Saving new email:', newEmail);
             if (newEmail && newEmail.trim()) {
               updateDoctorInfo({ email: newEmail.trim() });
             }
@@ -254,7 +216,6 @@ export default function ProfileScreen() {
   };
 
   const handleEditPhone = () => {
-    console.log('✏️ Edit phone pressed!');
     Alert.prompt(
       "Edit Phone",
       "Enter new phone number:",
@@ -263,7 +224,6 @@ export default function ProfileScreen() {
         {
           text: "Save",
           onPress: (newPhone) => {
-            console.log('✏️ Saving new phone:', newPhone);
             if (newPhone && newPhone.trim()) {
               updateDoctorInfo({ phone: newPhone.trim() });
             }
@@ -276,7 +236,6 @@ export default function ProfileScreen() {
   };
 
   const handleEditHospital = () => {
-    console.log('✏️ Edit hospital pressed!');
     Alert.prompt(
       "Edit Hospital/Clinic",
       "Enter new hospital or clinic name:",
@@ -285,7 +244,6 @@ export default function ProfileScreen() {
         {
           text: "Save",
           onPress: (newHospital) => {
-            console.log('✏️ Saving new hospital:', newHospital);
             if (newHospital && newHospital.trim()) {
               updateDoctorInfo({ hospitalOrClinicName: newHospital.trim() });
             }
@@ -304,27 +262,18 @@ export default function ProfileScreen() {
         Alert.alert('Error', 'Authentication required');
         return;
       }
-
-      console.log('📤 Updating doctor info:', updates);
-      
       const response = await apiService.updateDoctorProfile(token, doctorData.id, updates);
-
       if (response.success) {
-        // Update local state
         setDoctorData(prev => prev ? { ...prev, ...updates } : null);
-        
-        // Update user data in storage
         if (userData) {
           const updatedUserData = { ...userData, ...updates };
           await authStorage.setUserData(updatedUserData);
         }
-
         Alert.alert('Success', 'Information updated successfully!');
       } else {
         throw new Error(response.error || 'Failed to update information');
       }
     } catch (error) {
-      console.error('Error updating doctor info:', error);
       Alert.alert('Error', 'Failed to update information. Please try again.');
     }
   };
@@ -361,9 +310,7 @@ export default function ProfileScreen() {
       </View>
       <View style={styles.infoValueContainer}>
         <Text style={[styles.infoValue, isEditable && styles.editableValue]}>{value}</Text>
-        {isEditable && (
-          <Ionicons name="create-outline" size={16} color="#4DA8DA" style={{ marginLeft: 8 }} />
-        )}
+        {/* Removed the edit (pencil) icon */}
       </View>
     </TouchableOpacity>
   );
@@ -382,7 +329,6 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -405,7 +351,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
@@ -457,19 +402,18 @@ export default function ProfileScreen() {
             </Text>
           </View>
         </View>
-
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>
-              {isLoadingStats ? "..." : (doctorData?.totalPatients || "0")}
+              6
             </Text>
             <Text style={styles.statLabel}>Patients</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>
-              {isLoadingStats ? "..." : (doctorData?.totalAppointments || "0")}
+              24
             </Text>
             <Text style={styles.statLabel}>Appointments</Text>
           </View>
@@ -481,7 +425,6 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Experience</Text>
           </View>
         </View>
-
         {/* Personal Information */}
         {renderProfileSection(
           "Personal Information",
@@ -502,7 +445,6 @@ export default function ProfileScreen() {
             )}
           </View>
         )}
-
         {/* Professional Information */}
         {renderProfileSection(
           "Professional Information",
@@ -536,7 +478,6 @@ export default function ProfileScreen() {
             )}
           </View>
         )}
-
         {/* Bio */}
         {renderProfileSection(
           "About",
@@ -546,7 +487,6 @@ export default function ProfileScreen() {
             </Text>
           </View>
         )}
-
         {/* Settings */}
         {renderProfileSection(
           "Settings",
@@ -559,10 +499,7 @@ export default function ProfileScreen() {
                   "Help & Support",
                   "Contact Information",
                   [
-                    {
-                      text: "Cancel",
-                      style: "cancel",
-                    },
+                    { text: "Cancel", style: "cancel" },
                     {
                       text: "Email: oncall@gmail.com",
                       onPress: () => Linking.openURL("mailto:oncall@gmail.com"),
@@ -622,18 +559,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         )}
-
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="log-out-outline" size={20} color="#ffffff" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -655,7 +580,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 40, // Increased from 16 to create space from clock
+    paddingTop: 16, // Reduced from 40
     paddingBottom: 20,
     backgroundColor: "#ffffff",
   },
@@ -695,7 +620,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingVertical: 12, // Reduced from 24
     backgroundColor: "#f8fafc",
     marginHorizontal: 20,
     borderRadius: 16,
@@ -716,13 +641,13 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 56, // Increased from 32
   },
   avatarImage: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginBottom: 8,
+    marginBottom: 56, // Increased from 32
   },
   uploadOverlay: {
     position: 'absolute',
@@ -741,12 +666,13 @@ const styles = StyleSheet.create({
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 12, // Reduced from 24
   },
   ratingText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
-    marginLeft: 4,
+    marginLeft: -3, // Moved Active text a bit more left
   },
   profileInfo: {
     flex: 1,

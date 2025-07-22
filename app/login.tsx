@@ -1,32 +1,32 @@
+import { loginDoctor } from "@/API/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { apiService } from "@/services/api";
 import { authStorage } from "@/services/authStorage";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { AppColors } from "../constants/AppColors";
 
-
 interface FormData {
-  civilId: string;
+  civilID: string;
   password: string;
 }
 
 export default function LoginPage() {
   const [formData, setFormData] = useState<FormData>({
-    civilId: "",
+    civilID: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
@@ -39,39 +39,46 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
-    if (!formData.civilId || !formData.password) {
-      Alert.alert("Error", "Please fill in all required fields");
+    const civilID = formData.civilID.trim();
+    const password = formData.password.trim();
+
+    if (!civilID || !password) {
+      Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
 
     setLoading(true);
-    console.log("🔐 Attempting login with Civil ID:", formData.civilId);
+    console.log(`🔐 Attempting login with Civil ID: ${civilID}`);
 
     try {
-      const response = await apiService.login(formData.civilId, formData.password);
+      const response = await loginDoctor(civilID, password);
+
+      console.log("🌐 API Response:", response);
 
       if (response.success && response.data) {
-        // Store authentication data
         await authStorage.login(response.data.token, response.data);
         console.log("✅ Login successful:", response.data);
-        
-        // Show success message
+
         Alert.alert(
-          "Login Successful", 
+          "Login Successful",
           `Welcome back, Dr. ${response.data.name}!`,
           [
             {
               text: "Continue",
-              onPress: () => router.push("/(tabs)")
-            }
+              onPress: () => router.replace("/(tabs)"),
+            },
           ]
         );
       } else {
-        console.log("❌ Login failed:", response.error);
-        Alert.alert("Login Failed", response.error || "Invalid credentials. Please try again.");
+        console.warn("❌ Login failed:", response.error);
+        Alert.alert(
+          "Login Failed",
+          response.error ||
+            "Invalid credentials. Make sure your Civil ID and password are correct and that you have registered."
+        );
       }
     } catch (error) {
-      console.log("💥 Login error:", error);
+      console.error("💥 Login error:", error);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -88,21 +95,26 @@ export default function LoginPage() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Welcome Section */}
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeTitle}>Welcome!</Text>
+            <Image
+              source={require('../assets/images/download.png')}
+              style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 32, marginTop: 32 }}
+              resizeMode="contain"
+            />
             <Text style={styles.welcomeSubtitle}>Sign in to your account</Text>
           </View>
 
-          {/* Login Form */}
           <View style={styles.formContainer}>
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Label>Civil ID</Label>
                 <Input
-                  value={formData.civilId}
-                  onChangeText={(value) => handleInputChange("civilId", value)}
+                  value={formData.civilID}
+                  onChangeText={(value) => handleInputChange("civilID", value)}
                   placeholder="Enter your Civil ID"
+                  autoCapitalize="none"
+                  keyboardType="default" // ✅ use normal keyboard
+                  style={{ width: '100%' }}
                 />
               </View>
 
@@ -113,6 +125,7 @@ export default function LoginPage() {
                   onChangeText={(value) => handleInputChange("password", value)}
                   placeholder="Enter your password"
                   secureTextEntry
+                  style={{ width: '100%' }}
                 />
               </View>
 
@@ -133,17 +146,6 @@ export default function LoginPage() {
               <TouchableOpacity style={styles.forgotPassword}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.registerLink}
-                onPress={() => router.push("/debug" as any)}
-              >
-                <Text style={styles.registerLinkText}>
-                  🔧 Test Backend Connection
-                </Text>
-              </TouchableOpacity>
-
-
             </View>
           </View>
         </ScrollView>
@@ -156,66 +158,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 0,
   },
   keyboardAvoidingView: {
     flex: 1,
+    width: "100%",
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
+    justifyContent: "center",
+    width: "100%",
+    paddingHorizontal: 28,
+    paddingTop: 0,
+    paddingBottom: 36,
   },
   welcomeContainer: {
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 50,
-    paddingHorizontal: 24,
+    marginBottom: 24,
+    paddingHorizontal: 16,
   },
   welcomeTitle: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: "700",
     color: AppColors.primary,
     marginBottom: 12,
     textAlign: "center",
   },
   welcomeSubtitle: {
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: "600",
     color: AppColors.textSecondary,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 28,
   },
   formContainer: {
     paddingHorizontal: 0,
+    width: '100%',
   },
   form: {
-    gap: 16,
+    gap: 24,
+    width: '100%',
   },
   inputGroup: {
-    gap: 8,
+    gap: 12,
   },
   submitButton: {
-    marginTop: 8,
+    marginTop: 16,
+    width: '95%',
+    height: 56,
+    alignSelf: 'center',
   },
   forgotPassword: {
     alignItems: "center",
     marginTop: 16,
   },
   forgotPasswordText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#6b7280",
-  },
-  registerLink: {
-    alignItems: "center",
-    marginTop: 16,
-  },
-  registerLinkText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  registerLinkBold: {
-    color: AppColors.primary,
-    fontWeight: "600",
   },
   loadingContainer: {
     flexDirection: "row",
@@ -225,8 +226,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 16,
     color: AppColors.textSecondary,
   },
-
 });

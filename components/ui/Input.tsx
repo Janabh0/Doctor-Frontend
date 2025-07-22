@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import {
-  TextInput,
-  View,
   StyleSheet,
-  TextStyle,
+  TextInput,
   TextInputProps,
+  TextStyle,
+  View,
 } from "react-native";
 import { AppColors } from "../../constants/AppColors";
 
@@ -49,18 +49,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   input: {
-    height: 48,
+    height: 56,
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: '#2A4D5F',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+    paddingVertical: 16,
+    fontSize: 18,
     backgroundColor: "#ffffff",
     color: "#111827",
   },
   focused: {
-    borderColor: AppColors.primary,
+    borderColor: '#2A4D5F',
     borderWidth: 2,
   },
   error: {
